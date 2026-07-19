@@ -1,4 +1,4 @@
-# Bestands- & Verkaufs-Dashboard-Generator
+# StockPilot – Bestands- & Verkaufs-Dashboard
 
 Selbstbedienbares Web-Tool: Kunde lädt seine Verkaufs-/Bestandsdatei (CSV oder Excel)
 hoch und erhält sofort ein interaktives Dashboard – ganz ohne Excel-Kenntnisse und

@@ -13,7 +13,7 @@ import plotly.express as px
 from datetime import datetime
 
 st.set_page_config(
-    page_title="Bestands- & Verkaufs-Dashboard",
+    page_title="StockPilot – Bestands- & Verkaufs-Dashboard",
     page_icon="📊",
     layout="wide",
 )
@@ -34,10 +34,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("📊 Bestands- & Verkaufs-Dashboard")
+st.title("📊 StockPilot")
 st.caption(
-    "Datei hochladen, in wenigen Sekunden ein fertiges Dashboard erhalten — "
-    "ganz ohne Excel-Formeln oder manuelle Auswertung."
+    "Dein Bestands- & Verkaufs-Dashboard: Datei hochladen, in wenigen Sekunden "
+    "ein fertiges Dashboard erhalten — ganz ohne Excel-Formeln oder manuelle Auswertung."
 )
 
 # --- Sidebar: Datenquelle ---
