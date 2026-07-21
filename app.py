@@ -20,24 +20,70 @@ st.set_page_config(
     layout="wide",
 )
 
-# --- Styling (theme-sicher: greift auf Streamlits eigene CSS-Variablen zu,
+# --- Markenfarben & Styling (theme-sicher: nutzt Streamlits CSS-Variablen,
 #     damit es in Hell- UND Dunkelmodus funktioniert) ---
+BRAND = "#0d9488"        # Petrol/Teal – StockPilot-Markenfarbe
+BRAND_LIGHT = "#5eead4"  # heller Ton für Sekundär-Linien (z. B. gleitender Ø)
+
 st.markdown(
-    """
+    f"""
     <style>
-        div[data-testid="stMetric"] {
+        /* Markenfarbe per CSS (statt config.toml), damit die App weiterhin
+           dem Hell/Dunkel-Theme des Betrachters folgt. */
+        :root, .stApp {{ --primary-color: {BRAND} !important; }}
+        [data-baseweb="tab-highlight"] {{ background-color: {BRAND} !important; }}
+        .stSlider [data-baseweb="slider"] div[role="slider"] {{ background-color: {BRAND} !important; }}
+        a, a:visited {{ color: {BRAND}; }}
+        /* Kopfbereich im Altware-Stil: kursiv, fett, mit Feature-Breadcrumb */
+        .sp-header {{ margin: 0 0 6px 0; }}
+        .sp-title {{
+            font-size: 2.4rem; font-weight: 800; font-style: italic;
+            letter-spacing: -0.02em; line-height: 1.1;
+        }}
+        .sp-crumb {{
+            margin-top: 6px; font-weight: 700; font-size: 0.9rem;
+            opacity: 0.7;
+        }}
+        .sp-crumb b {{ color: {BRAND}; }}
+        .sp-pill {{
+            display: inline-block; background: {BRAND}; color: #fff;
+            border-radius: 999px; padding: 2px 10px; margin-left: 8px;
+            font-size: 0.72rem; font-weight: 800; vertical-align: middle;
+        }}
+        /* KPI-Karten mit Marken-Akzentlinie und kursiven Zahlen */
+        div[data-testid="stMetric"] {{
             background-color: var(--secondary-background-color);
             border: 1px solid rgba(128, 128, 128, 0.25);
+            border-top: 3px solid {BRAND};
             border-radius: 12px;
             padding: 14px 16px;
-        }
-        div[data-testid="stMetricValue"] { font-weight: 700; font-size: 1.7rem; }
+        }}
+        div[data-testid="stMetricValue"] {{
+            font-weight: 800; font-style: italic; font-size: 1.7rem;
+        }}
+        /* Buttons/Downloads in Markenfarbe */
+        .stDownloadButton button, .stButton button {{
+            border-color: {BRAND};
+        }}
+        .stDownloadButton button:hover, .stButton button:hover {{
+            background: {BRAND}; color: #fff; border-color: {BRAND};
+        }}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-st.title("📊 StockPilot")
+st.markdown(
+    """
+    <div class="sp-header">
+        <div class="sp-title">📊 StockPilot</div>
+        <div class="sp-crumb">Import <b>·</b> Filter <b>·</b> KPIs <b>·</b> ABC-Analyse <b>·</b> Export
+            <span class="sp-pill">LIVE</span>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 st.caption(
     "Dein Bestands- & Verkaufs-Dashboard: Datei hochladen, in wenigen Sekunden "
     "ein fertiges Dashboard erhalten — ganz ohne Excel-Formeln oder manuelle Auswertung."
@@ -293,6 +339,7 @@ with tabs[0]:
     fig_trend = px.line(
         trend, x="Datum", y=["Umsatz", "Gleitender Ø"],
         labels={"value": "Umsatz (€)", "variable": ""},
+        color_discrete_sequence=[BRAND, BRAND_LIGHT],
     )
     fig_trend.update_layout(margin=dict(t=10), legend=dict(orientation="h", y=1.1))
     st.plotly_chart(fig_trend, use_container_width=True)
@@ -310,6 +357,7 @@ with tabs[1]:
         fig_top = px.bar(
             top, x=revenue_col, y=product_col, orientation="h",
             labels={revenue_col: "Umsatz (€)", product_col: "Artikel"},
+            color_discrete_sequence=[BRAND],
         )
         fig_top.update_layout(yaxis=dict(autorange="reversed"), margin=dict(t=10))
         st.plotly_chart(fig_top, use_container_width=True)
@@ -319,6 +367,7 @@ with tabs[1]:
         fig_flop = px.bar(
             flop, x=revenue_col, y=product_col, orientation="h",
             labels={revenue_col: "Umsatz (€)", product_col: "Artikel"},
+            color_discrete_sequence=[BRAND_LIGHT],
         )
         fig_flop.update_layout(yaxis=dict(autorange="reversed"), margin=dict(t=10))
         st.plotly_chart(fig_flop, use_container_width=True)
@@ -352,6 +401,7 @@ if has_stock:
         fig_stock = px.bar(
             latest.sort_values(stock_col), x=stock_col, y=product_col, orientation="h",
             labels={stock_col: "Bestand", product_col: "Artikel"},
+            color_discrete_sequence=[BRAND],
         )
         fig_stock.update_layout(margin=dict(t=10))
         st.plotly_chart(fig_stock, use_container_width=True)
