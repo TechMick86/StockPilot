@@ -9,6 +9,10 @@ ohne Excel-Kenntnisse, ohne Support-Anruf.
 import io
 from datetime import datetime, timedelta
 
+import matplotlib
+matplotlib.use("Agg")  # ohne Display-Server (für Streamlit Cloud)
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -163,6 +167,69 @@ def to_excel_bytes(df: pd.DataFrame, sheet_name: str = "Auswertung") -> bytes:
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name=sheet_name)
+    return buffer.getvalue()
+
+
+def _eur(x) -> str:
+    """Zahl im deutschen Euro-Format (1.234,56 €)."""
+    s = f"{x:,.2f}"
+    return s.replace(",", "X").replace(".", ",").replace("X", ".") + " €"
+
+
+def build_pdf_report(daily, top, abc_counts, kpis, period_label, brand):
+    """Baut einen gebrandeten einseitigen PDF-Report (KPIs, Umsatztrend,
+    Top-Artikel, ABC-Zusammenfassung) und gibt ihn als Bytes zurück."""
+    buffer = io.BytesIO()
+    with PdfPages(buffer) as pdf:
+        fig = plt.figure(figsize=(11.69, 8.27))  # A4 quer
+        fig.suptitle("StockPilot – Bestands- & Verkaufsreport", x=0.06, y=0.96,
+                     ha="left", fontsize=20, fontstyle="italic", fontweight="bold",
+                     color="#111827")
+        fig.text(0.06, 0.915, f"Zeitraum: {period_label}", ha="left",
+                 fontsize=10, color="#64748b")
+        fig.text(0.06, 0.895, f"Erstellt am {datetime.today():%d.%m.%Y}", ha="left",
+                 fontsize=9, color="#94a3b8")
+
+        # KPI-Zeile als Text
+        kpi_x = [0.06, 0.30, 0.54, 0.78]
+        for x, (label, value) in zip(kpi_x, kpis):
+            fig.text(x, 0.83, value, ha="left", fontsize=17, fontweight="bold",
+                     fontstyle="italic", color=brand)
+            fig.text(x, 0.80, label, ha="left", fontsize=9, color="#64748b")
+
+        # Umsatztrend
+        ax1 = fig.add_axes([0.06, 0.40, 0.88, 0.32])
+        ax1.plot(daily["Datum"], daily["Umsatz"], color=brand, linewidth=1.2, label="Umsatz")
+        if "Gleitender Ø" in daily:
+            ax1.plot(daily["Datum"], daily["Gleitender Ø"], color="#5eead4",
+                     linewidth=2, label="Gleitender Ø")
+        ax1.set_title("Umsatztrend", loc="left", fontsize=12, fontweight="bold", color="#111827")
+        ax1.legend(loc="upper right", fontsize=8, frameon=False)
+        ax1.spines[["top", "right"]].set_visible(False)
+        ax1.tick_params(labelsize=8)
+
+        # Top-Artikel
+        ax2 = fig.add_axes([0.06, 0.06, 0.52, 0.26])
+        ax2.barh(top["Artikel"][::-1], top["Umsatz"][::-1], color=brand)
+        ax2.set_title("Top-Artikel nach Umsatz", loc="left", fontsize=12,
+                      fontweight="bold", color="#111827")
+        ax2.spines[["top", "right"]].set_visible(False)
+        ax2.tick_params(labelsize=8)
+
+        # ABC-Zusammenfassung
+        fig.text(0.64, 0.30, "ABC-Analyse", fontsize=12, fontweight="bold", color="#111827")
+        abc_lines = [
+            f"A-Artikel (Top-Umsatz):  {abc_counts.get('A', 0)}",
+            f"B-Artikel (Mittelfeld):  {abc_counts.get('B', 0)}",
+            f"C-Artikel (Ausläufer):   {abc_counts.get('C', 0)}",
+        ]
+        for i, line in enumerate(abc_lines):
+            fig.text(0.64, 0.25 - i * 0.035, line, fontsize=10, color="#334155")
+        fig.text(0.64, 0.09, "StockPilot · getstockpilot.streamlit.app",
+                 fontsize=8, color="#94a3b8")
+
+        pdf.savefig(fig)
+        plt.close(fig)
     return buffer.getvalue()
 
 
@@ -442,15 +509,35 @@ if has_stock:
 # Export & Rohdaten
 # ---------------------------------------------------------------------------
 st.divider()
-export_cols = st.columns(2)
+st.subheader("Report & Export")
+
+period_label = f"{start_d:%d.%m.%Y} – {end_d:%d.%m.%Y}"
+pdf_kpis = [
+    ("Gesamtumsatz", _eur(total_revenue)),
+    ("Verkaufte Menge", f"{total_qty:,.0f}".replace(",", ".")),
+    ("Anzahl Artikel", f"{n_products}"),
+    ("Ø Umsatz/Zeile", _eur(avg_row)),
+]
+top_pdf = by_product.head(10).rename(columns={product_col: "Artikel", revenue_col: "Umsatz"})
+pdf_bytes = build_pdf_report(trend, top_pdf, counts, pdf_kpis, period_label, BRAND)
+
+export_cols = st.columns(3)
 with export_cols[0]:
+    st.download_button(
+        "📑 PDF-Report",
+        data=pdf_bytes,
+        file_name=f"stockpilot_report_{datetime.today():%Y-%m-%d}.pdf",
+        mime="application/pdf",
+        help="Fertiger, gebrandeter Report zum Weitergeben – KPIs, Umsatztrend, Top-Artikel, ABC.",
+    )
+with export_cols[1]:
     st.download_button(
         "⬇️ Auswertung als Excel",
         data=to_excel_bytes(dff),
         file_name=f"stockpilot_auswertung_{datetime.today():%Y-%m-%d}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-with export_cols[1]:
+with export_cols[2]:
     st.download_button(
         "⬇️ Artikel-Umsätze als Excel",
         data=to_excel_bytes(by_product.rename(columns={product_col: "Artikel", revenue_col: "Umsatz"})),
