@@ -28,12 +28,8 @@ BRAND_LIGHT = "#5eead4"  # heller Ton für Sekundär-Linien (z. B. gleitender Ø
 st.markdown(
     f"""
     <style>
-        /* Markenfarbe per CSS (statt config.toml), damit die App weiterhin
-           dem Hell/Dunkel-Theme des Betrachters folgt. */
-        :root, .stApp {{ --primary-color: {BRAND} !important; }}
-        [data-baseweb="tab-highlight"] {{ background-color: {BRAND} !important; }}
-        .stSlider [data-baseweb="slider"] div[role="slider"] {{ background-color: {BRAND} !important; }}
-        a, a:visited {{ color: {BRAND}; }}
+        /* Akzentfarbe (Tabs, Slider, Checkbox, Radio, Links) kommt aus
+           .streamlit/config.toml (primaryColor). Hier nur die Custom-Elemente. */
         /* Kopfbereich im Altware-Stil: kursiv, fett, mit Feature-Breadcrumb */
         .sp-header {{ margin: 0 0 6px 0; }}
         .sp-title {{
@@ -251,20 +247,45 @@ if n_dropped:
 # ---------------------------------------------------------------------------
 st.sidebar.header("3. Filter")
 min_d, max_d = df[date_col].min().date(), df[date_col].max().date()
+
 if min_d == max_d:
-    date_range = (min_d, max_d)
+    start_d, end_d = min_d, max_d
     st.sidebar.caption(f"Zeitraum: {min_d:%d.%m.%Y}")
 else:
-    date_range = st.sidebar.slider(
-        "Zeitraum", min_value=min_d, max_value=max_d, value=(min_d, max_d), format="DD.MM.YYYY"
+    preset = st.sidebar.radio(
+        "Zeitraum",
+        ["Gesamter Zeitraum", "Letzte 30 Tage", "Letzte 90 Tage", "Benutzerdefiniert"],
     )
+    if preset == "Letzte 30 Tage":
+        default_start = max(min_d, max_d - timedelta(days=29))
+    elif preset == "Letzte 90 Tage":
+        default_start = max(min_d, max_d - timedelta(days=89))
+    else:
+        default_start = min_d
+
+    picked = st.sidebar.date_input(
+        "Von – Bis",
+        value=(default_start, max_d),
+        min_value=min_d,
+        max_value=max_d,
+        format="DD.MM.YYYY",
+        disabled=(preset != "Benutzerdefiniert"),
+        key=f"daterange_{preset}",
+        help="Bei 'Benutzerdefiniert' Start- und Enddatum frei im Kalender wählen.",
+    )
+    if isinstance(picked, (list, tuple)) and len(picked) == 2:
+        start_d, end_d = picked
+    elif isinstance(picked, (list, tuple)) and len(picked) == 1:
+        start_d, end_d = picked[0], max_d
+    else:
+        start_d, end_d = default_start, max_d
 
 all_products = sorted(df[product_col].dropna().astype(str).unique().tolist())
 sel_products = st.sidebar.multiselect(
     "Artikel (leer = alle)", options=all_products, default=[]
 )
 
-start_d, end_d = date_range
+st.sidebar.caption(f"Gewählt: {start_d:%d.%m.%Y} – {end_d:%d.%m.%Y}")
 mask = (df[date_col].dt.date >= start_d) & (df[date_col].dt.date <= end_d)
 if sel_products:
     mask &= df[product_col].astype(str).isin(sel_products)

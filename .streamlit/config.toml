@@ -1,0 +1,8 @@
+[theme]
+# StockPilot-Markenfarbe (Petrol/Teal) – färbt alle Widgets zuverlässig:
+# Checkbox, Radio, Tabs, Slider, Links, Buttons.
+# Hinweis: Ein definiertes Theme fixiert die App auf einen hellen Look
+# (kein automatischer Dark Mode) – bewusster Trade-off zugunsten
+# durchgängiger Marken-Konsistenz für ein Verkaufsprodukt.
+base = "light"
+primaryColor = "#0d9488"
